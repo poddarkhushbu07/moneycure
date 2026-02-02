@@ -2,9 +2,9 @@
   "name": "moneycure-backend",
   "version": "1.0.0",
   "private": true,
+  "main": "server.js",
   "scripts": {
-    "start": "node src/index.js",
-    "seed-dummy-users": "node scripts/seed-dummy-users.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -17,7 +17,6 @@
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.18.0"
   },
-  "main": "server.js",
   "keywords": [],
   "author": "",
   "license": "ISC",
