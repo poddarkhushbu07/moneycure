@@ -23,6 +23,12 @@ app.use(
 
 app.use(express.json());
 
+// Log each request so Railway logs show traffic (method + path only)
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 app.get('/__ping', (req, res) => {
   res.status(200).send('PING_OK');
 });
@@ -399,9 +405,10 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
+const HOST = '0.0.0.0'; // Required for Railway: accept connections from proxy, not only localhost
 
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`Server is running on ${HOST}:${PORT}`);
 });
 
 // Prevent unhandled rejections from crashing the process.
