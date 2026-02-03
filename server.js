@@ -23,15 +23,12 @@ app.use(
 
 app.use(express.json());
 
-// Local auth: POST /auth/login, POST /auth/logout
-app.use('/auth', authRouter);
-
-// Health check route
+// Health check (before any auth middleware — for Railway/load balancers)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.status(200).json({ status: 'ok' });
 });
 
-// Database check route
+// Database check (unauthenticated)
 app.get('/db-check', async (req, res) => {
   try {
     const result = await pool.query('SELECT 1');
@@ -41,6 +38,9 @@ app.get('/db-check', async (req, res) => {
     res.status(500).json({ ok: false, error: 'Database check failed' });
   }
 });
+
+// Local auth: POST /auth/login, POST /auth/logout
+app.use('/auth', authRouter);
 
 // Create a new customer — admin only
 app.post('/customers', authenticate, requireAdmin, async (req, res) => {
