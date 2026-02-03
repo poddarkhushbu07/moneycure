@@ -23,6 +23,10 @@ app.use(
 
 app.use(express.json());
 
+app.get('/__ping', (req, res) => {
+  res.status(200).send('PING_OK');
+});
+
 // Health check (before any auth middleware — for Railway/load balancers)
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
