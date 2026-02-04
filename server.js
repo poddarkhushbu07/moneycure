@@ -5,32 +5,41 @@
 require('dotenv').config();
 
 const express = require('express');
-const cors = require('cors');
 const pool = require('./db');
 const authRouter = require('./routes/auth');
 const { authenticate, requireAdmin, requireStaffOrAdmin, requireCustomerSelf } = require('./auth/middleware');
 
 const app = express();
 
-// CORS: allow only FRONTEND_URL (Vercel frontend). Comma-separated for multiple (e.g. production + preview).
-// Normalize: trim and strip trailing slash so Origin header matches.
+// CORS: explicit handling so preflight (OPTIONS) always gets headers. Allow FRONTEND_URL + *.vercel.app.
 const allowedOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map((o) => o.trim().replace(/\/+$/, ''))
   .filter(Boolean);
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Allow requests with no origin (e.g. Postman, curl, same-origin)
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
-      cb(null, false);
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }),
-);
+const allowVercelPreview = allowedOrigins.some((o) => o.includes('vercel.app'));
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+  try {
+    if (allowVercelPreview && new URL(origin).hostname.endsWith('.vercel.app')) return true;
+  } catch (_) {}
+  return false;
+}
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (isOriginAllowed(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
 
 app.use(express.json());
 
