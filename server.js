@@ -5,41 +5,38 @@
 require('dotenv').config();
 
 const express = require('express');
+const cors = require('cors');
 const pool = require('./db');
 const authRouter = require('./routes/auth');
 const { authenticate, requireAdmin, requireStaffOrAdmin, requireCustomerSelf } = require('./auth/middleware');
 
 const app = express();
 
-// CORS: explicit handling so preflight (OPTIONS) always gets headers. Allow FRONTEND_URL + *.vercel.app.
 const allowedOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map((o) => o.trim().replace(/\/+$/, ''))
   .filter(Boolean);
-const allowVercelPreview = allowedOrigins.some((o) => o.includes('vercel.app'));
 
-function isOriginAllowed(origin) {
-  if (!origin) return true;
-  if (allowedOrigins.includes(origin)) return true;
-  try {
-    if (allowVercelPreview && new URL(origin).hostname.endsWith('.vercel.app')) return true;
-  } catch (_) {}
-  return false;
-}
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (isOriginAllowed(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  }
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-  next();
-});
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    try {
+      const hostname = new URL(origin).hostname;
+      if (hostname.endsWith('.vercel.app')) return callback(null, true);
+    } catch (e) {}
+
+    // Instead of throwing error, deny by returning false (avoids breaking preflight)
+    return callback(null, false);
+  },
+  credentials: true,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
@@ -440,4 +437,3 @@ process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
   server.close(() => process.exit(1));
 });
-
