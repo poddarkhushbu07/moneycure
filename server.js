@@ -12,12 +12,23 @@ const { authenticate, requireAdmin, requireStaffOrAdmin, requireCustomerSelf } =
 
 const app = express();
 
-// CORS: allow only FRONTEND_URL (Vercel frontend). Required for Railway deployment.
-const frontendOrigin = process.env.FRONTEND_URL;
+// CORS: allow only FRONTEND_URL (Vercel frontend). Comma-separated for multiple (e.g. production + preview).
+// Normalize: trim and strip trailing slash so Origin header matches.
+const allowedOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
 app.use(
   cors({
-    origin: frontendOrigin || false,
+    origin: (origin, cb) => {
+      // Allow requests with no origin (e.g. Postman, curl, same-origin)
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      cb(null, false);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 );
 
