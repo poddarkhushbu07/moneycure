@@ -66,6 +66,23 @@ app.get('/db-check', async (req, res) => {
   }
 });
 
+// One-time seed (e.g. when Render Shell not available). Requires SEED_SECRET in env.
+const { runSeed } = require('./scripts/runSeed');
+app.post('/seed', async (req, res) => {
+  const secret = process.env.SEED_SECRET;
+  const provided = req.headers['x-seed-secret'] || req.query.secret;
+  if (!secret || provided !== secret) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  try {
+    const { seeded, localUsers } = await runSeed(pool);
+    res.json({ ok: true, seeded, localUsers, message: 'Password for all: 123456' });
+  } catch (err) {
+    console.error('Seed error:', err);
+    res.status(500).json({ ok: false, error: err.message || 'Seed failed' });
+  }
+});
+
 // Local auth: POST /auth/login, POST /auth/logout
 app.use('/auth', authRouter);
 
